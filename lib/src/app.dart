@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:movie_app/src/core/assets/icons.dart';
 import 'package:movie_app/src/core/styles/theme.dart';
 import 'package:movie_app/src/core/utils/navigator.dart';
+import 'package:movie_app/src/models/failure.dart';
 import 'package:movie_app/src/service_locator.dart';
 import 'package:movie_app/src/ui/screens/movies/controllers/genres_controller.dart';
 import 'package:movie_app/src/ui/screens/movies/controllers/movies_controller.dart';
@@ -25,6 +27,7 @@ class MyApp extends StatelessWidget {
       ],
       child: ScreenUtilInit(
         designSize: const Size(360, 640),
+        minTextAdapt: true,
         builder: (BuildContext context, Widget? child) {
           return MaterialApp(
             title: 'Movie App',
@@ -58,7 +61,11 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _fetchGenres() async {
-    await context.read<GenresController>().fetchGenres();
+    try {
+      Future.wait([context.read<GenresController>().fetchGenres()]);
+    } on Failure catch (error) {
+      log(error.message);
+    }
   }
 
   @override

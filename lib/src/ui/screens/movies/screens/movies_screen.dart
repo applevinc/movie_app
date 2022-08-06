@@ -1,7 +1,9 @@
+import 'package:async_builder/async_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:movie_app/src/core/assets/icons.dart';
+import 'package:movie_app/src/models/failure.dart';
 import 'package:movie_app/src/models/movie.dart';
 import 'package:movie_app/src/ui/screens/movies/controllers/movies_controller.dart';
 import 'package:movie_app/src/ui/widgets/movie_tile.dart';
@@ -20,7 +22,6 @@ class _MoviesScreenState extends State<MoviesScreen> {
   @override
   void initState() {
     super.initState();
-
     _movies = _fetchLatestMovies();
   }
 
@@ -28,7 +29,11 @@ class _MoviesScreenState extends State<MoviesScreen> {
     final controller = context.read<MoviesController>();
 
     if (controller.movies.isEmpty) {
-      return controller.fetchLatestMovies();
+      try {
+        return await controller.fetchLatestMovies();
+      } on Failure {
+        rethrow;
+      }
     } else {
       return controller.movies;
     }
@@ -41,8 +46,8 @@ class _MoviesScreenState extends State<MoviesScreen> {
         automaticallyImplyLeading: false,
         title: Text(
           'Top Movies',
-          style: Theme.of(context).textTheme.headline6!.copyWith(
-                fontSize: 24.sp,
+          style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                fontSize: 32.sp,
                 fontWeight: FontWeight.w600,
               ),
         ),
@@ -51,64 +56,50 @@ class _MoviesScreenState extends State<MoviesScreen> {
             padding: EdgeInsets.only(right: 26.w),
             child: GestureDetector(
               onTap: () {},
-              child: SvgPicture.asset(AppIcons.search),
+              child: SvgPicture.asset(
+                AppIcons.search,
+                height: 20.h,
+                width: 20.h,
+              ),
             ),
           ),
         ],
       ),
-      body: SafeArea(
-        child: Consumer<MoviesController>(
-          builder: (BuildContext context, controller, Widget? child) {
-            return FutureBuilder<List<Movie>>(
-              future: _movies,
-              builder: (context, snapshot) {
-                switch (snapshot.connectionState) {
-                  case ConnectionState.waiting:
-                    return const Center(child: CircularProgressIndicator());
-                  case ConnectionState.done:
-
-                  default:
-                    if (snapshot.hasError) {
-                      final error = snapshot.error;
-
-                      return _ErrorScreen(message: error.toString());
-                    } else if (snapshot.hasData) {
-                      final featuredMovie = controller.featuredMovie;
-                      final movies = controller.movies;
-
-                      return CustomScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        slivers: [
-                          SliverPadding(
-                            padding: EdgeInsets.only(top: 8.h),
-                            sliver: SliverToBoxAdapter(
-                              child: MovieTile(featuredMovie!, isFeatured: true),
-                            ),
-                          ),
-                          SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final movie = movies[index];
-                                return MovieTile(movie);
-                              },
-                              semanticIndexCallback: (Widget widget, int localIndex) {
-                                return 16.h.toInt();
-                              },
-                              childCount: movies.length,
-                            ),
-                          ),
-                        ],
-                      );
-                    } else {
-                      const _EmptyMoviesScreen();
-                    }
-                }
-                return const Center(child: CircularProgressIndicator());
-              },
-            );
-          },
-        ),
+      body: AsyncBuilder<List<Movie>>(
+        future: _movies,
+        waiting: (context) => const Center(child: CircularProgressIndicator()),
+        builder: (context, movies) {
+          if (movies == null) {
+            return const _EmptyMoviesScreen();
+          }
+          return _MoviesListView(movies);
+        },
+        error: (context, err, _) {
+          final error = err as Failure;
+          return _ErrorScreen(message: error.message);
+        },
       ),
+    );
+  }
+}
+
+class _MoviesListView extends StatelessWidget {
+  const _MoviesListView(this.movies, {Key? key}) : super(key: key);
+
+  final List<Movie> movies;
+
+  @override
+  Widget build(BuildContext context) {
+    if (movies.isEmpty) {
+      return const _EmptyMoviesScreen();
+    }
+    return ListView.builder(
+      physics: const BouncingScrollPhysics(),
+      itemCount: movies.length,
+      itemBuilder: (_, index) {
+        final movie = movies[index];
+        return MovieTile(movie);
+      },
     );
   }
 }
