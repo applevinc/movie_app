@@ -12,9 +12,9 @@ class MoviesController extends ChangeNotifier {
 
   MoviesController({required MovieService movieService}) : _movieService = movieService;
 
-  Future<List<Movie>> fetchLatestMovies() async {
+  Future<List<Movie>> fetchLatestMovies({required int page}) async {
     try {
-      final results = await _movieService.fetchLatestMovies();
+      final results = await _movieService.fetchLatestMovies(page: page);
 
       if (results.isNotEmpty) {
         _featuredMovie = results.first;
@@ -22,6 +22,16 @@ class MoviesController extends ChangeNotifier {
         _movies.removeAt(0);
       }
       return _movies;
+    } on Failure {
+      rethrow;
+    }
+  }
+
+  Future<List<Movie>> search(String query) async {
+    try {
+      final results = await _movieService.search(query);
+      _movies = results;
+      return results;
     } on Failure {
       rethrow;
     }

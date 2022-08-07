@@ -11,8 +11,8 @@ class MovieServiceImpl implements MovieService {
       : _requestHelper = requestHelper;
 
   @override
-  Future<List<Movie>> fetchLatestMovies() async {
-    var url = '/movie/popular?api_key=${APIUrls.apiKey}&language=en-US&page=1';
+  Future<List<Movie>> fetchLatestMovies({required int page}) async {
+    var url = '/movie/popular?api_key=${APIUrls.apiKey}&language=en-US&page=$page';
 
     try {
       final response = await _requestHelper.getRequest(url: url);
@@ -21,6 +21,24 @@ class MovieServiceImpl implements MovieService {
     } on Failure {
       rethrow;
     } on Error {
+      throw Failure('Server error, try again later');
+    }
+  }
+
+  @override
+  Future<List<Movie>> search(String query) async {
+    var url =
+        '/search/movie?api_key=${APIUrls.apiKey}&language=en-US&query=$query&page=1&include_adult=false';
+
+    try {
+      final response = await _requestHelper.getRequest(url: url);
+      final List collection = response['results'];
+      return collection.map((json) => Movie.fromJson(json)).toList();
+    } on Failure {
+      rethrow;
+    } on Error {
+      throw Failure('Server error, try again later');
+    } on Exception {
       throw Failure('Server error, try again later');
     }
   }

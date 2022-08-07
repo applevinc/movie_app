@@ -1,12 +1,11 @@
 import 'package:async_builder/async_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:movie_app/src/core/assets/icons.dart';
 import 'package:movie_app/src/models/failure.dart';
 import 'package:movie_app/src/models/movie.dart';
 import 'package:movie_app/src/ui/screens/movies/controllers/movies_controller.dart';
 import 'package:movie_app/src/ui/widgets/movie_tile.dart';
+import 'package:movie_app/src/ui/widgets/search_textfield.dart';
 import 'package:provider/provider.dart';
 
 class MoviesScreen extends StatefulWidget {
@@ -18,6 +17,7 @@ class MoviesScreen extends StatefulWidget {
 
 class _MoviesScreenState extends State<MoviesScreen> {
   late Future<List<Movie>> _movies;
+  StateSetter? searchState;
 
   @override
   void initState() {
@@ -30,7 +30,7 @@ class _MoviesScreenState extends State<MoviesScreen> {
 
     if (controller.movies.isEmpty) {
       try {
-        return await controller.fetchLatestMovies();
+        return await controller.fetchLatestMovies(page: 1);
       } on Failure {
         rethrow;
       }
@@ -39,45 +39,96 @@ class _MoviesScreenState extends State<MoviesScreen> {
     }
   }
 
+  Future<List<Movie>> search(String query) async {
+    final controller = context.read<MoviesController>();
+    if (query.isNotEmpty) {
+      try {
+        return await controller.search(query);
+      } on Failure {
+        rethrow;
+      }
+    } else {
+      throw Failure('Enter a movie name');
+    }
+  }
+
+  Future<void> refresh() async {
+    final controller = context.read<MoviesController>();
+    _movies = controller.fetchLatestMovies(page: 18);
+    searchState!(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        centerTitle: true,
         title: Text(
           'Top Movies',
           style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                fontSize: 32.sp,
+                fontSize: 20.sp,
                 fontWeight: FontWeight.w600,
               ),
         ),
-        actions: [
+      ),
+      body: Column(
+        children: [
           Padding(
-            padding: EdgeInsets.only(right: 26.w),
-            child: GestureDetector(
-              onTap: () {},
-              child: SvgPicture.asset(
-                AppIcons.search,
-                height: 20.h,
-                width: 20.h,
-              ),
+            padding: EdgeInsets.symmetric(horizontal: 20.w),
+            child: SearchWidget(
+              onChanged: (query) {
+                _movies = search(query);
+                searchState!(() {});
+              },
+              onClose: () => refresh(),
             ),
+          ),
+          SizedBox(height: 20.h),
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              searchState = searchState ?? setState;
+
+              return AsyncBuilder<List<Movie>>(
+                future: _movies,
+                waiting: (context) => const CustomLoadingIndicator(),
+                builder: (context, movies) {
+                  if (movies == null) {
+                    return const _EmptyMoviesScreen();
+                  }
+                  return Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: refresh,
+                      child: _MoviesListView(movies),
+                    ),
+                  );
+                },
+                error: (context, err, _) {
+                  final error = err as Failure;
+                  return _ErrorScreen(
+                    message: error.message,
+                    onRetry: () => refresh(),
+                  );
+                },
+              );
+            },
           ),
         ],
       ),
-      body: AsyncBuilder<List<Movie>>(
-        future: _movies,
-        waiting: (context) => const Center(child: CircularProgressIndicator()),
-        builder: (context, movies) {
-          if (movies == null) {
-            return const _EmptyMoviesScreen();
-          }
-          return _MoviesListView(movies);
-        },
-        error: (context, err, _) {
-          final error = err as Failure;
-          return _ErrorScreen(message: error.message);
-        },
+    );
+  }
+}
+
+class CustomLoadingIndicator extends StatelessWidget {
+  const CustomLoadingIndicator({
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return const Expanded(
+      child: Center(
+        child: CircularProgressIndicator(),
       ),
     );
   }
@@ -130,27 +181,40 @@ class _EmptyMoviesScreen extends StatelessWidget {
 }
 
 class _ErrorScreen extends StatelessWidget {
-  const _ErrorScreen({Key? key, required this.message}) : super(key: key);
+  const _ErrorScreen({
+    Key? key,
+    required this.message,
+    required this.onRetry,
+  }) : super(key: key);
+
   final String message;
+  final Function() onRetry;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          Icons.error_outline,
-          size: 34.h,
-          color: Colors.white,
-        ),
-        SizedBox(height: 20.h),
-        Text(
-          message,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.titleLarge!.copyWith(color: Colors.white),
-        ),
-      ],
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 34.h,
+            color: Colors.white,
+          ),
+          SizedBox(height: 20.h),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge!.copyWith(color: Colors.white),
+          ),
+          SizedBox(height: 10.h),
+          TextButton(
+            onPressed: onRetry,
+            child: const Text('Try again'),
+          ),
+        ],
+      ),
     );
   }
 }
