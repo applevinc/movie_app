@@ -10,10 +10,18 @@ class MoviesController extends ChangeNotifier {
   Movie? _featuredMovie;
   Movie? get featuredMovie => _featuredMovie;
 
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
+  void setIsLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
   MoviesController({required MovieService movieService}) : _movieService = movieService;
 
   Future<List<Movie>> fetchLatestMovies({required int page}) async {
     try {
+      _isLoading = true;
       final results = await _movieService.fetchLatestMovies(page: page);
 
       if (results.isNotEmpty) {
@@ -21,8 +29,10 @@ class MoviesController extends ChangeNotifier {
         _movies = results;
         _movies.removeAt(0);
       }
+      setIsLoading(false);
       return _movies;
     } on Failure {
+      setIsLoading(false);
       rethrow;
     }
   }

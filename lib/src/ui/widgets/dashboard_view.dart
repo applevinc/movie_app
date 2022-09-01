@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:movie_app/src/core/assets/icons.dart';
 import 'package:movie_app/src/core/styles/color.dart';
-import 'package:movie_app/src/ui/screens/movies/screens/movies_screen.dart';
+import 'package:movie_app/src/ui/screens/movies/screens/movies_screens_copy.dart';
+import 'package:movie_app/src/ui/screens/scoket_screen.dart';
+
+final numberProvider = Provider<int>((ref) => 24);
 
 class DashboardView extends StatefulWidget {
   const DashboardView({Key? key}) : super(key: key);
@@ -12,13 +16,13 @@ class DashboardView extends StatefulWidget {
 }
 
 class _DashboardViewState extends State<DashboardView> {
-  int _selectedIndex = 1;
+  int _selectedIndex = 0;
 
   static const List<Widget> _screens = <Widget>[
-    MoviesScreen(),
-    MoviesScreen(),
-    MoviesScreen(),
-    MoviesScreen(),
+    MoviesScreenCopy(),
+    MoviesScreenCopy(),
+    SocketScreen(),
+    MoviesScreenCopy(),
   ];
 
   void _onItemTapped(int index) {
