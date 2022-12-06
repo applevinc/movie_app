@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:movie_app/src/core/assets/icons.dart';
 import 'package:movie_app/src/core/styles/color.dart';
+import 'package:movie_app/src/ui/screens/auth/welcome_back_screen.dart';
 import 'package:movie_app/src/ui/screens/movies/screens/movies_screens_copy.dart';
 import 'package:movie_app/src/ui/screens/scoket_screen.dart';
 
@@ -19,7 +20,7 @@ class _DashboardViewState extends State<DashboardView> {
   int _selectedIndex = 0;
 
   static const List<Widget> _screens = <Widget>[
-    MoviesScreenCopy(),
+    WelcomeBackScreen(),
     MoviesScreenCopy(),
     SocketScreen(),
     MoviesScreenCopy(),
